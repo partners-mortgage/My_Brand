@@ -292,7 +292,7 @@ footer.site .legal{font-size:11px;color:#8a9a9c;max-width:560px;line-height:1.6}
     <div class="toolbar">
       <div class="search">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
-        <input id="gallerySearch" placeholder="Search badges..." oninput="renderGallery()">
+        <input id="gallerySearch" type="search" name="badge-q" placeholder="Search badges..." aria-label="Search badges" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" oninput="renderGallery()">
       </div>
     </div>
     <div class="chips" id="galleryChips" style="margin-bottom:24px"></div>
