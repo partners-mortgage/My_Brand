@@ -539,7 +539,7 @@ footer.site .legal{font-size:11px;color:#8a9a9c;max-width:560px;line-height:1.6}
       <div style="overflow:auto"><table class="atable" id="userTable"></table></div>
     </div>
     <div id="atab-badges" style="display:none">
-      <div class="row-actions" style="margin-bottom:16px"><button class="btn btn-primary btn-sm" onclick="editBadge(null)">+ New badge</button></div>
+      <div class="row-actions" style="margin-bottom:16px"><button class="btn btn-primary btn-sm" onclick="editBadge(null)">+ New badge</button><button class="btn btn-ghost btn-sm" onclick="syncCatalogManual()">Sync catalog to current design</button></div>
       <div style="overflow:auto"><table class="atable" id="badgeTable"></table></div>
     </div>
     <div id="atab-assign" style="display:none">
@@ -1022,7 +1022,7 @@ function loadAll(cb){
         STATE.badges = res[0].docs.map(function(d){var o=d.data();o.id=d.id;return o;}).sort(function(a,b){return (a.sortOrder||0)-(b.sortOrder||0);});
         STATE.userBadges = {};
         res[1].docs.forEach(function(d){var o=d.data(); if(o.status!=='revoked'){ (STATE.userBadges[o.userId]=STATE.userBadges[o.userId]||[]).push(o.badgeId);} });
-        if(STATE.badges.length===0 && isAdmin()){ seedToFirestore(cb); return; }
+        if(isAdmin() && (STATE.badges.length===0 || catalogNeedsSync())){ migrateCatalog(function(){ toast('Badge catalog updated to current'); cb(); }); return; }
         cb();
       }).catch(function(err){ console.error(err); cb(); });
     });
@@ -1044,6 +1044,23 @@ function seedToFirestore(cb){
   var b=seedBadges(), batch=db.batch();
   b.forEach(function(bd){ var ref=db.collection('badges').doc(bd.id); batch.set(ref,bd); });
   batch.commit().then(function(){ STATE.badges=b; toast('Seeded starter badges'); cb(); }).catch(function(){ cb(); });
+}
+function catalogNeedsSync(){
+  var ids={}; STATE.badges.forEach(function(b){ ids[b.id]=1; });
+  return !!(ids['b1'] || ids['b7'] || !ids['b1-platinum'] || !ids['b1-gold']);
+}
+function migrateCatalog(cb){
+  var want=seedBadges();
+  if(DEMO){ STATE.badges=want; persistDemo(); if(cb)cb(); return; }
+  var wantIds={}; want.forEach(function(b){ wantIds[b.id]=1; });
+  var batch=db.batch();
+  want.forEach(function(b){ batch.set(db.collection('badges').doc(b.id), b); });
+  STATE.badges.forEach(function(b){ if(!wantIds[b.id]) batch.delete(db.collection('badges').doc(b.id)); });
+  batch.commit().then(function(){ STATE.badges=want.slice().sort(function(a,b){return (a.sortOrder||0)-(b.sortOrder||0);}); if(cb)cb(); }).catch(function(e){ console.error(e); if(cb)cb(); });
+}
+function syncCatalogManual(){
+  if(!isAdmin()){ toast('Admins only','err'); return; }
+  migrateCatalog(function(){ if(typeof renderBadgeTable==='function') renderBadgeTable(); if(typeof renderGallery==='function') renderGallery(); toast('Badge catalog synced to current design'); });
 }
 
 /* save helpers */
